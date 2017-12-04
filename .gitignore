@@ -137,3 +137,17 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+
+# data file
+*.pkl
+*.h5
+*.csv
+*.zip
+*.rar
+*.jpg
+*.png
+*.mpg
+
+*.txt
+*.jpg
