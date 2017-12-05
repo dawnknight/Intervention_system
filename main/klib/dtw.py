@@ -49,6 +49,7 @@ class Dtw(object):
         self.cntdown     = 90
         # exe2 parameters
         # self.hcnt        = 0
+        self.btype       = 'out'
         self.hstate      = np.array([])
         self.rawhstate   = np.array([0,0])
         # self.hstate_cnt  = np.array([0,0])
@@ -59,6 +60,7 @@ class Dtw(object):
         self.ref_dmap    = None
         self.ref_bdry    = np.array([])
         self.breath_list = []
+        self.breath      = None
         # updatable parameters
         self.dpfirst     = {}
         self.dist_p      = {}
@@ -72,6 +74,8 @@ class Dtw(object):
         self.onedeflag   = False
         self.segini      = True
         self.evalstr     = ''
+        self.offset      = 0
+        self.ngframe     = []
         #self.segend      = False
         # exercise order
         self.order = defaultdict(dict)
@@ -156,12 +160,14 @@ class Dtw(object):
         self.onedeflag   = False
         self.segini      = True
 
-    def run(self, reconJ, gt_data, exeno, surface, lhs=0, rhs=0, dmap=[], bdry=[], lowpass=True):
+    def run(self, reconJ, gt_data, exeno, surface, lhs=0, rhs=0, dmap=[], bdry=[], frameno=0, lowpass=True):
         """ according to different exercise, doing different processing
         """
         if not self.order[exeno][self.oidx] == 'end':
             if exeno == 1:
-                if self.cntdown < 0:
+                if self.cntdown <= 0:
+                    if self.offset == 0:
+                        self.offset = frameno
                     if len(self.holdlist) == 0:  # hand in the holding state or not
                         self.holdlist = reconJ
                     else:
@@ -170,15 +176,15 @@ class Dtw(object):
                         if np.sum(np.abs(self.holdlist[0]-self.holdlist[-1])[self.jweight[2] != 0]) > 400:
                             self.holdstate = False
                     if self.holdstate:
-                        self.io.typetext(surface,'Starting breath in/out' ,(100,100),(255,0,0))
+                        self.io.typetext(surface,'Starting breath in/out' ,(100, 100), (255, 0, 0))
                         self.breathIO(bdry, dmap)
                     else:
                         if not self.do_once:
-                            self.breath_analyze(self.fcnt)
+                            self.breath_analyze(self.offset)
                             self.do_once = True
                             self._done = True
                 else:
-                    self.io.typetext(surface,'will Starting at '+str(np.round(self.cntdown/30.,2))+' second' ,(100,100),(255,0,0))
+                    self.io.typetext(surface,'will Starting at '+str(np.round(self.cntdown/30., 2))+' second' ,(100, 100),(255, 0, 0))
                     self.cntdown -= 1
             elif exeno == 2:
                 if self.order[exeno][self.oidx] == [2]:
@@ -190,13 +196,13 @@ class Dtw(object):
                         if np.sum(np.abs(self.holdlist[0]-self.holdlist[-1])[self.jweight[2] != 0]) > 1000:
                             self.holdstate = False
                     if self.holdstate:
-                        self.io.typetext(surface,'Starting breath in/out with hand close/open ' ,(100,100),(255,0,0))
+                        self.io.typetext(surface,'Starting breath in/out with hand close/open ' ,(100, 100), (255, 0, 0))
                         self.handstate(lhs, rhs)
                         self.breathIO(bdry, dmap)
                     else:
                         if not self.do_once:
-                            self.breath_analyze(self.fcnt)
-                            self.hand_analyze(self.fcnt)
+                            self.breath_analyze(self.offset)
+                            self.hand_analyze(self.offset)
                             self.do_once = True                        
                         self.matching(reconJ, gt_data, exeno)
                 else:
@@ -385,25 +391,53 @@ class Dtw(object):
             
         """
         # breath part
-        breath_gd = np.gradient(gf_2D(self.breath_list, 10))
-        breath_gd[breath_gd > 0] = 0
-        breath_gd[breath_gd < 0] = 1
+        breath_gd = np.gradient(gf(self.breath_list, 10))
+        breath_gd[breath_gd > 0] = 1
+        breath_gd[breath_gd < 0] = 0
         breath_pulse = breath_gd[:-1]-np.roll(breath_gd, -1)[:-1]
-        breath_in = argrelextrema(breath_pulse, np.less, order=10)[0]+offset
-        breath_out = argrelextrema(breath_pulse, np.greater, order=10)[0]+offset
-        breath = np.sort(np.hstack([breath_in, breath_out]))
-        if len(breath) != 0:
-            if breath_in[0] == breath[0]:  # breath in happen first
-                string = ['in', 'out']
+        breath_in = argrelextrema(breath_pulse, np.less, order=10)[0]#+offset
+        breath_out = argrelextrema(breath_pulse, np.greater, order=10)[0]#+offset
+        self.breath = np.sort(np.hstack([breath_in, breath_out, len(self.breath_list)-1]))
+        if self.breath[0]-0 >= 30:
+            self.breath = np.hstack([0, self.breath])
+            if self.breath[1] == breath_in[0]:
+                self.btype = 'in'
             else:
-                string = ['out', 'in']
-            print('\n')
-            for idx in xrange(len(breath)-1):
-                print('breath '+string[np.mod(idx, 2)]+' from frame '+str(breath[idx])
-                    +' to frame '+str(breath[idx+1]-1))
-            diff = (np.roll(breath,-1)-breath)[:-1]
-            print('\naverage breath '+string[0]+' freq is: '+str(np.round(30./np.mean(diff[0::2]),2))+' Hz')
-            print('average breath '+string[1]+' freq is: '+str(np.round(30./np.mean(diff[1::2]),2))+' Hz\n')
+                self.btype = 'out' 
+        else:
+            if self.breath[0] == breath_in[0]:
+                self.btype = 'in'
+            else:
+                self.btype = 'out'             
+
+
+        b_in = []
+        b_out = []
+
+        if len(self.breath) != 0:       
+            for i, j in zip(self.breath[:-1], self.breath[1:]):
+                breath_diff = self.breath_list[j]-self.breath_list[i]
+                if abs(breath_diff) > 3000:  # really breath in/out
+                    if abs(breath_diff) < 30000:  # not deep breath
+                        if breath_diff > 0:  # breath out
+                            print('breath out from frame '+str(i)+' to frame '+str(j)
+                                +' <== breath not deep enough')
+                            b_out.append(j-i)
+                            self.ngframe.append(i)
+                        else:  # breath in
+                            print('breath in from frame '+str(i)+' to frame '+str(j)
+                            +' <== breath not deep enough')
+                            b_in.append(j-i)
+                    else: 
+                        if breath_diff > 0:  # breath out
+                            print('breath out from frame '+str(i)+' to frame '+str(j))
+                            b_out.append(j-i)
+                        else:  # breath in
+                            print('breath in from frame '+str(i)+' to frame '+str(j))
+                            b_in.append(j-i)
+
+            print('\naverage breath out freq is: '+str(np.round(30./np.mean(b_out), 2))+' Hz')
+            print('\naverage breath in freq is: '+str(np.round(30./np.mean(b_in), 2))+' Hz')
         else:
             raise ImportError('Doing too fast !! please redo again !!')    
 
@@ -412,6 +446,8 @@ class Dtw(object):
         """
         # === hand close/open part ===
         foo = signal.medfilt(self.hstate, kernel_size=3)
+        sync_rate = sum((foo[:, 0] == foo[:, 1])*1.)/len(foo[:, 0])*100
+        print('left and right hand synchronize rate is '+str(np.round(sync_rate, 2))+'%')
         self.hstate[1:-1] = foo[1:-1]
         if np.sum(self.hstate[0]) != 4:
             self.error.append('two hand must open when you rise you hands')
@@ -452,22 +488,92 @@ class Dtw(object):
             print('hand close '+str(max(len(lh_close), len(rh_close)))+' times,')
         else:
             print('hand close '+str(len(lh_close))+ ' times\n')
+        self.breath_hand_sync(lh_open, lh_close, self.btype)
+
+    def breath_hand_sync(self, lhopen, lhclose, breath_type='out'):
+        """calculate breath and hand open/close relation
+        """
+        hand = np.sort(np.hstack([lhopen, lhclose]))
+        if self.breath[0]==0:
+            breath_data = self.breath[1:]
+        else:
+            breath_data = self.breath
+        if hand[0] == lhopen[0]:  # first term is open
+            mode = 'open'
+        else:
+            mode = 'close'
+
+        hand_trunc = np.vstack([hand, np.roll(hand, -1)])[:,:-1].T
+        hand_trunc = np.vstack([hand_trunc, np.array([hand[-1], len(self.breath_list)-1])])
+
+        if mode == 'close':
+            hand_trunc_close = hand_trunc[::2,:]
+            hand_trunc_open = hand_trunc[1::2,:]
+        else:
+            hand_trunc_close = hand_trunc[1::2,:]
+            hand_trunc_open = hand_trunc[::2,:]            
+
+        if breath_type == 'out':
+            breath_in = breath_data[1::2]
+            breath_out = breath_data[::2]
+        else:
+            breath_out = breath_data[::2]
+            breath_in = breath_data[1::2]            
+
+        cnt = 0
+        for i in breath_in:
+            loc = np.where(((i >= hand_trunc_close[:, 0]) & (i <= hand_trunc_close[:, 1])) == True)[0]
+            if len(loc) == 1:
+                cnt += 1
+            elif len(loc) == 0:
+                pass
+            else:
+                print hand_trunc
+        for i in breath_out:
+            loc = np.where(((i >= hand_trunc_open[:, 0]) & (i <= hand_trunc_open[:, 1])) == True)[0]
+            if len(loc) == 1:
+                cnt += 1
+            elif len(loc) == 0:
+                pass
+            else:
+                print hand_trunc
+
+        sync_rate = cnt*1./len(hand_trunc)*100
+        print('hand and breath synchronize rate is '+str(np.round(sync_rate, 2))+'%')
+
 
     def evaluation(self, exeno, err=[]):
         """ exercise performance evaluation
         """
         fig = plt.figure(1)
+        ax = fig.add_subplot(111)
         if exeno == 1:       
-            plt.plot(gf_2D(self.breath_list, 10)/self.breath_list[0]*2, color='g')
+            ax.plot(gf(self.breath_list, 10), color='g')
+            if len(self.ngframe) != 0:
+                for i in self.ngframe:
+                    y1 = self.breath_list[i]
+                    if y1 < 15000:
+                        y2 = y1+10000
+                    else:
+                        y2 = y1-10000    
+                    ax.annotate('Not deep breath', xy=(i, y1+10), xytext=(i, y2),arrowprops=dict(facecolor='red', shrink=0.05),)
             plt.title('Breath in and out')
             fig.savefig('output/bio.jpg')
-            pdb.set_trace()
         elif exeno == 2:
-            plt.plot(self.hstate[:,0], color='b')
-            plt.plot(self.hstate[:,1]-5, color='r')
-            plt.plot(gf_2D(self.breath_list, 10)/self.breath_list[0]*2, color='g')
+            ax.plot(self.hstate[:,0], color='b')
+            ax.plot(self.hstate[:,1]-5, color='r')
+            ax.plot(gf(self.breath_list, 10)/self.breath_list[0]*2, color='g')
+            if len(self.ngframe) != 0:
+                for i in self.ngframe:
+                    y1 = self.breath_list[i]
+                    if y1 < 15000:
+                        y2 = y1+10000
+                    else:
+                        y2 = y1-10000    
+                    ax.annotate('Not deep breath', xy=(i, y1+10), xytext=(i, y2),arrowprops=dict(facecolor='red', shrink=0.05),)
             plt.title('Breath in and out & hands open and close')
             fig.savefig('output/biohoc.jpg')
+            plt.show()
         plt.close(fig)
 
         print('\nevaluation:')

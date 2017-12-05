@@ -22,6 +22,7 @@ class Kparam(object):
         self.model_frame = False
         self.clipNo      = 0
         self.fno         = 0 
+        self.framecnt    = 0
                   
 
 

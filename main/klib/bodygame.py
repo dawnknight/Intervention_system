@@ -329,7 +329,7 @@ class BodyGameRuntime(object):
                             bdry = self.getcoord(djps)
                             self.dtw.run(reconJ, gt_data[self.exeno], self.exeno,\
                                          self._frame_surface, body.hand_left_state,
-                                         body.hand_right_state, dframe,bdry)                        
+                                         body.hand_right_state, dframe, bdry, self.kp.framecnt)                        
                         else:
                             self.dtw.run(reconJ, gt_data[self.exeno], self.exeno,\
                                          body.hand_left_state, body.hand_right_state)
@@ -360,7 +360,7 @@ class BodyGameRuntime(object):
                         self.io.typetext(self._frame_surface, 'Rhand : '+Rhstatus, (100, 900), (0, 0, 255), fontsize=60, bold=True) 
 
                         if self.dtw.evalstr != '':
-                            self.io.typetext(self._frame_surface,self.dtwevalstr, (100, 300),(255, 0, 0), fontsize=100)
+                            self.io.typetext(self._frame_surface,self.dtw.evalstr, (100, 300),(255, 0, 0), fontsize=100)
                             self.dtw.fcnt += 1
                             if self.dtw.fcnt > 40 :
                                 if self.dtw.oidx !=5:
@@ -397,6 +397,7 @@ class BodyGameRuntime(object):
                     bddic['LHS'] = body.hand_left_state
                     bddic['RHS'] = body.hand_right_state
 
+                self.kp.framecnt += 1  # frame no
             else:
                 self.io.typetext(self._frame_surface, 'No human be detected ', (100, 100))
 
