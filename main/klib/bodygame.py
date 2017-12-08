@@ -356,19 +356,17 @@ class BodyGameRuntime(object):
                         else:
                             Rhstatus = 'Not be detected'
                         
-                        self.io.typetext(self._frame_surface, 'Lhand : '+Lhstatus, (100, 800), (0, 0, 255), fontsize=60, bold=True)        
-                        self.io.typetext(self._frame_surface, 'Rhand : '+Rhstatus, (100, 900), (0, 0, 255), fontsize=60, bold=True) 
+                        self.io.typetext(self._frame_surface, 'Lhand : '+Lhstatus, (100, 800), (255, 69, 0), fontsize=60, bold=True)        
+                        self.io.typetext(self._frame_surface, 'Rhand : '+Rhstatus, (100, 900), (255, 69, 0), fontsize=60, bold=True) 
 
                         if self.dtw.evalstr != '':
-                            self.io.typetext(self._frame_surface,self.dtw.evalstr, (100, 300),(255, 0, 0), fontsize=100)
+                            self.io.typetext(self._frame_surface, self.dtw.evalstr, (100, 300),(255, 0, 0), fontsize=100)
                             self.dtw.fcnt += 1
-                            if self.dtw.fcnt > 40 :
-                                if self.dtw.oidx !=5:
-                                    self.dtw.evalstr = ''
-                                    self.dtw.fcnt  = 0
-                                else:
-                                    self.dtw.evalstr = 'finish'
+                            if self.dtw.fcnt > 30 :
+                                self.dtw.evalstr = ''
+                                self.dtw.fcnt  = 0
                     else:
+                        self.io.typetext(self._frame_surface, 'finish exercise '+str(self.exeno), (100, 300),(255, 0, 0), fontsize=100)
                         if not self.kp.finish:
                             self.dtw.evaluation(self.exeno)
                             print self.dtw.idxlist

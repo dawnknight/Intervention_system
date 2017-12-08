@@ -27,55 +27,56 @@ class Dtw(object):
             initailize dtw parameters
         """
         # dtw parameters initialization
-        self.io          = Dataoutput()
-        self._done       = False
-        self.do_once     = False
-        self.decTh       = 1800
-        self.cnt         = 0
-        self.distp_prev  = 0
-        self.distp_cmp   = np.inf
-        self.oidx        = 0  # initail
-        self.gt_idx      = 0
-        self.Ani_idx     = 0
-        self.presv_size  = 0
-        self.idxlist     = []
-        self.idx_cmp     = 0
-        self.fcnt        = 0
+        self.io            = Dataoutput()
+        self._done         = False
+        self.do_once       = False
+        self.decTh         = 1800
+        self.cnt           = 0
+        self.distp_prev    = 0
+        self.distp_cmp     = np.inf
+        self.oidx          = 0  # initail
+        self.gt_idx        = 0
+        self.Ani_idx       = 0
+        self.presv_size    = 0
+        self.idxlist       = []
+        self.idx_cmp       = 0
+        self.fcnt          = 0
         # self.finishcnt   = 0
-        self.srchfw      = 10  # forward search range
-        self.srchbw      = 20  # backward search range
-        self.error       = []
+        self.srchfw        = 10  # forward search range
+        self.srchbw        = 20  # backward search range
+        self.error         = []
         # exe1 parameters
-        self.cntdown     = 90
+        self.cntdown       = 90
         # exe2 parameters
         # self.hcnt        = 0
-        self.btype       = 'out'
-        self.hstate      = np.array([])
-        self.rawhstate   = np.array([0,0])
+        self.btype         = 'out'
+        self.missingbreath = []
+        self.hstate        = np.array([])
+        self.rawhstate     = np.array([0,0])
         # self.hstate_cnt  = np.array([0,0])
         # self.hopen_list  = []
         # self.hclose_list = []
-        self.holdstate   = True
-        self.holdlist    = np.array([])
-        self.ref_dmap    = None
-        self.ref_bdry    = np.array([])
-        self.breath_list = []
-        self.breath      = None
+        self.holdstate     = True
+        self.holdlist      = np.array([])
+        self.ref_dmap      = None
+        self.ref_bdry      = np.array([])
+        self.breath_list   = []
+        self.breath        = None
         # updatable parameters
-        self.dpfirst     = {}
-        self.dist_p      = {}
-        self.deflag_mul  = defaultdict(lambda: (bool(False)))
-        self.seqlist     = np.array([])
-        self.seqlist_reg = np.array([])
-        self.seqlist_gf  = np.array([])
-        self.dcnt        = 0
-        self.chk_flag    = False
-        self.deflag      = False  # decreasing flag
-        self.onedeflag   = False
-        self.segini      = True
-        self.evalstr     = ''
-        self.offset      = 0
-        self.ngframe     = []
+        self.dpfirst       = {}
+        self.dist_p        = {}
+        self.deflag_mul    = defaultdict(lambda: (bool(False)))
+        self.seqlist       = np.array([])
+        self.seqlist_reg   = np.array([])
+        self.seqlist_gf    = np.array([])
+        self.dcnt          = 0
+        self.chk_flag      = False
+        self.deflag        = False  # decreasing flag
+        self.onedeflag     = False
+        self.segini        = True
+        self.evalstr       = ''
+        self.offset        = 0
+        self.ngframe       = []
         #self.segend      = False
         # exercise order
         self.order = defaultdict(dict)
@@ -220,7 +221,7 @@ class Dtw(object):
     def matching(self, reconJ, gt_data, exeno, lowpass=True):
         """the main part of dtw matching algorithm
         """
-        self.fcnt += 1
+        # self.fcnt += 1
         if self.segini:  # new segement/movement start
             self.segini = False
             # self.Ani_idx = self.aniorder[exeno][self.Ani_idx]
@@ -253,6 +254,7 @@ class Dtw(object):
                                 minidx = 3
                             self.gt_idx = minidx
                             self.idxlist.append(self.gt_idx)
+                            self.evalstr = 'well done'
                             self.seg_update(endidx)
                 else:
                     test_data_p = self.seqlist + np.atleast_2d((gt_data[self.gt_idx][0, :]-self.seqlist[0, :]))
@@ -369,7 +371,8 @@ class Dtw(object):
                               int(max(cur_bdry[1], self.ref_bdry[1])),
                               int(max(cur_bdry[2], self.ref_bdry[2])),
                               int(min(cur_bdry[3], self.ref_bdry[3]))])
-            blk_diff = gf_2D(abs(dmap-self.ref_dmap)[ubdry[1]:ubdry[0], ubdry[2]:ubdry[3]], 5)
+            # blk_diff = gf_2D(abs(dmap-self.ref_dmap)[ubdry[1]:ubdry[0], ubdry[2]:ubdry[3]], 5)
+            blk_diff = gf_2D((dmap-self.ref_dmap)[ubdry[1]:ubdry[0], ubdry[2]:ubdry[3]], 5)
             self.breath_list.append(np.mean(blk_diff))
 
     def find_pair_within(self, l1, l2, dist=10):
@@ -398,25 +401,29 @@ class Dtw(object):
         breath_in = argrelextrema(breath_pulse, np.less, order=10)[0]#+offset
         breath_out = argrelextrema(breath_pulse, np.greater, order=10)[0]#+offset
         self.breath = np.sort(np.hstack([breath_in, breath_out, len(self.breath_list)-1]))
-        if self.breath[0]-0 >= 30:
-            self.breath = np.hstack([0, self.breath])
-            if self.breath[1] == breath_in[0]:
-                self.btype = 'in'
-            else:
-                self.btype = 'out' 
+        # if self.breath[0]-0 >= 30:
+        #     self.breath = np.hstack([0, self.breath])
+        #     if self.breath[1] == breath_in[0]:
+        #         self.btype = 'in'
+        #     else:
+        #         self.btype = 'out' 
+        # else:
+        #     if self.breath[0] == breath_in[0]:
+        #         self.btype = 'in'
+        #     else:
+        #         self.btype = 'out'             
+        if self.breath[0] == breath_in[0]:
+            self.btype = 'in'
         else:
-            if self.breath[0] == breath_in[0]:
-                self.btype = 'in'
-            else:
-                self.btype = 'out'             
-
+            self.btype = 'out'         
 
         b_in = []
         b_out = []
+        delidx = []
 
         if len(self.breath) != 0:       
             for i, j in zip(self.breath[:-1], self.breath[1:]):
-                breath_diff = self.breath_list[j]-self.breath_list[i]
+                breath_diff = abs(self.breath_list[j]-self.breath_list[i])
                 if abs(breath_diff) > 3000:  # really breath in/out
                     if abs(breath_diff) < 30000:  # not deep breath
                         if breath_diff > 0:  # breath out
@@ -435,6 +442,11 @@ class Dtw(object):
                         else:  # breath in
                             print('breath in from frame '+str(i)+' to frame '+str(j))
                             b_in.append(j-i)
+                else:
+                    delidx.append(np.argwhere(self.breath==j)[0][0])
+            # print self.breath
+            # print delidx
+            self.breath = np.delete(self.breath, np.array(delidx))
 
             print('\naverage breath out freq is: '+str(np.round(30./np.mean(b_out), 2))+' Hz')
             print('\naverage breath in freq is: '+str(np.round(30./np.mean(b_in), 2))+' Hz')
@@ -519,25 +531,34 @@ class Dtw(object):
         else:
             breath_out = breath_data[::2]
             breath_in = breath_data[1::2]            
-
+        hand_chk = np.ones(len(hand_trunc))
+        # print hand_trunc
         cnt = 0
-        for i in breath_in:
+        # pdb.set_trace()
+        for idx, i in enumerate(breath_out):
             loc = np.where(((i >= hand_trunc_close[:, 0]) & (i <= hand_trunc_close[:, 1])) == True)[0]
             if len(loc) == 1:
                 cnt += 1
+                if (2*loc) < len(hand_trunc):
+                   hand_chk[2*loc] = 0 
             elif len(loc) == 0:
                 pass
             else:
                 print hand_trunc
-        for i in breath_out:
+        for idx, i in enumerate(breath_in):
             loc = np.where(((i >= hand_trunc_open[:, 0]) & (i <= hand_trunc_open[:, 1])) == True)[0]
             if len(loc) == 1:
                 cnt += 1
+                if (2*loc) < len(hand_trunc):
+                   hand_chk[2*loc+1] = 0                 
             elif len(loc) == 0:
                 pass
             else:
                 print hand_trunc
-
+        # pdb.set_trace()
+        self.missingbreath = hand_trunc[hand_chk==1]
+        # print cnt
+        # print len(hand_trunc)
         sync_rate = cnt*1./len(hand_trunc)*100
         print('hand and breath synchronize rate is '+str(np.round(sync_rate, 2))+'%')
 
@@ -560,20 +581,26 @@ class Dtw(object):
             plt.title('Breath in and out')
             fig.savefig('output/bio.jpg')
         elif exeno == 2:
-            ax.plot(self.hstate[:,0], color='b')
-            ax.plot(self.hstate[:,1]-5, color='r')
-            ax.plot(gf(self.breath_list, 10)/self.breath_list[0]*2, color='g')
+            ax.plot(self.hstate[:,0]*20000, color='b')
+            ax.plot(self.hstate[:,1]*20000-20000, color='r')
+            # ax.plot(gf(self.breath_list, 10)/self.breath_list[0]*2, color='g')
+            ax.plot(gf(self.breath_list, 10), color='g')
             if len(self.ngframe) != 0:
                 for i in self.ngframe:
-                    y1 = self.breath_list[i]
-                    if y1 < 15000:
-                        y2 = y1+10000
-                    else:
-                        y2 = y1-10000    
-                    ax.annotate('Not deep breath', xy=(i, y1+10), xytext=(i, y2),arrowprops=dict(facecolor='red', shrink=0.05),)
+                    y1 = self.breath_list[i]#/self.breath_list[0]*2
+                    y2 = 1.5*10000
+                    ax.annotate('breath not deep enough', xy=(i, y1), xytext=(i, y2),arrowprops=dict(facecolor='red', shrink=0.05),)
+            if len(self.missingbreath) != 0:
+                for i in self.missingbreath:
+                    x = sum(i)/2
+                    y1 = self.breath_list[x]#/self.breath_list[0]*2 
+                    y2 = 1*10000
+                    ax.annotate('missing breath', xy=(x, y1), xytext=(x, y2),arrowprops=dict(facecolor='green', shrink=0.05),)
+
             plt.title('Breath in and out & hands open and close')
             fig.savefig('output/biohoc.jpg')
             plt.show()
+            pdb.set_trace()
         plt.close(fig)
 
         print('\nevaluation:')
