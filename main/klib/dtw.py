@@ -197,7 +197,7 @@ class Dtw(object):
                         if np.sum(np.abs(self.holdlist[0]-self.holdlist[-1])[self.jweight[2] != 0]) > 1000:
                             self.holdstate = False
                     if self.holdstate:
-                        self.io.typetext(surface,'Starting breath in/out with hand close/open ' ,(100, 100), (255, 0, 0))
+                        self.io.typetext(surface,'Starting breath in (hand close) and breath out (hand open)' ,(20, 20), (255, 0, 0))
                         self.handstate(lhs, rhs)
                         self.breathIO(bdry, dmap)
                     else:
@@ -600,7 +600,7 @@ class Dtw(object):
             plt.title('Breath in and out & hands open and close')
             fig.savefig('output/biohoc.jpg')
             plt.show()
-            pdb.set_trace()
+            # pdb.set_trace()
         plt.close(fig)
 
         print('\nevaluation:')

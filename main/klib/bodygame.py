@@ -90,9 +90,9 @@ class BodyGameRuntime(object):
             frame = self._kinect.get_last_color_frame().reshape([1080, 1920, 4])[:, :, :3]
             bkimg = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-            print ('extract bg .....')
+            print ('Extract bg .....')
         else:
-            print 'failed to extract .....'
+            print 'Failed to extract .....'
 
         self.exeno = 4  # exercise number
         self.__param_init__()
@@ -100,15 +100,15 @@ class BodyGameRuntime(object):
     def __param_init__(self, clean=False):
         try:
             self.dataset.close()
-            print('save h5py ....')
+            print('Save h5py ....')
             if clean:
                 os.remove(self.kp.dstr+'.h5')
-                print('remove h5py ....')
+                print('Remove h5py ....')
         except:
             pass
         self.fig = None
         self.kp = Kparam(self.exeno, username)
-        self.movie = movie.Movie(self.exeno)
+        # self.movie = movie.Movie(self.exeno)
         self.dtw = Dtw()
         self.denoise = Denoise()
         self.rel = Rel()
@@ -148,25 +148,25 @@ class BodyGameRuntime(object):
 
         if press[pygame.K_h]:  # use 'h' to open, 'ctrl+h' to close finger detection
             if press[pygame.K_LCTRL] or press[pygame.K_RCTRL]:
-                print('finger detection disable .....')
+                print('Finger detection disable .....')
                 self.kp.handmode = False
             else:
-                print('finger detection enable .....')
+                print('Finger detection enable .....')
                 self.kp.handmode = True
 
         if press[pygame.K_m]:  # use 'm' to open, 'ctrl+m' to close human model
             if press[pygame.K_LCTRL] or press[pygame.K_RCTRL]:
-                print('human model disable .....')
+                print('Human model disable .....')
                 plt.close(self.fig)
                 self.kp.model_draw = False
                 self.kp.model_frame = False
             else:
-                print('human model enable .....')
+                print('Human model enable .....')
                 self.kp.model_draw = True
 
         if press[pygame.K_r]:  # use 'r' to start video recording
             if press[pygame.K_LCTRL] or press[pygame.K_RCTRL]:
-                print('stop recording .....')
+                print('Stop recording .....')
                 self.kp.vid_rcd = False
             else:
                 if self.kp.clipNo == 0:
@@ -183,19 +183,19 @@ class BodyGameRuntime(object):
 
         if press[pygame.K_g]:  # use 'g' to to open, 'ctrl+g' to close gpr denoise
             if press[pygame.K_LCTRL] or press[pygame.K_RCTRL]:
-                print('close denoising process .....')
+                print('Close denoising process .....')
                 self.denoise._done = True
             else:
-                print('start denoising process .....')
+                print('Start denoising process .....')
                 self.denoise._done = False
 
         if press[pygame.K_d]:  # use 'd' to to open, 'ctrl+d' to close dtw
             if press[pygame.K_LCTRL] or press[pygame.K_RCTRL]:
-                print('disable human behavior analyze .....')
+                print('Disable human behavior analyze .....')
                 self.dtw._done = True
                 self.kp.finish = True
             else:
-                print('enable human behavior analyze .....')
+                print('Enable human behavior analyze .....')
                 self.dtw._done = False
                 self.kp.finish = False
 
@@ -213,19 +213,19 @@ class BodyGameRuntime(object):
 
         if press[pygame.K_1]:  # use '1' to change to execise 1
             self.exeno = 1
-            print('====  doing exercise 1 ====')
+            print('====  Doing exercise 1 ====')
             self.reset(change=True)
         if press[pygame.K_2]:  # use '2' to change to execise 2
             self.exeno = 2
-            print('====  doing exercise 2 ====')
+            print('====  Doing exercise 2 ====')
             self.reset(change=True)
         if press[pygame.K_3]:  # use '3' to change to execise 3
             self.exeno = 3
-            print('====  doing exercise 3 ====')
+            print('====  Doing exercise 3 ====')
             self.reset(change=True)
         if press[pygame.K_4]:  # use '4' to change to execise 4
             self.exeno = 4
-            print('====  doing exercise 4 ====')
+            print('====  Doing exercise 4 ====')
             self.reset(change=True)
 
     def run(self):
@@ -335,38 +335,38 @@ class BodyGameRuntime(object):
                                          body.hand_left_state, body.hand_right_state)
 
                         if (body.hand_left_state == 2): #Lhand open
-                            Lhstatus = 'open'
+                            Lhstatus = 'Open'
                         elif body.hand_left_state == 0:
-                            Lhstatus = 'unknown'
+                            Lhstatus = 'Unknown'
                         elif body.hand_left_state == 3:
-                            Lhstatus = 'closed'
+                            Lhstatus = 'Closed'
                         elif body.hand_left_state == 4:
                             Lhstatus = 'Lasso'
                         else:
-                            Lhstatus = 'Not be detected'                            
+                            Lhstatus = 'Not detect'                            
 
                         if (body.hand_right_state == 2): #Lhand open
-                            Rhstatus = 'open'
+                            Rhstatus = 'Open'
                         elif body.hand_right_state == 0:
-                            Rhstatus = 'unknown'
+                            Rhstatus = 'Unknown'
                         elif body.hand_right_state ==3:
-                            Rhstatus = 'closed'
+                            Rhstatus = 'Closed'
                         elif body.hand_right_state == 4:
                             Rhstatus = 'Lasso'
                         else:
-                            Rhstatus = 'Not be detected'
+                            Rhstatus = 'Not detect'
                         
-                        self.io.typetext(self._frame_surface, 'Lhand : '+Lhstatus, (100, 800), (255, 69, 0), fontsize=60, bold=True)        
-                        self.io.typetext(self._frame_surface, 'Rhand : '+Rhstatus, (100, 900), (255, 69, 0), fontsize=60, bold=True) 
+                        #self.io.typetext(self._frame_surface, 'Lhand : '+Lhstatus, (20, 920), (255, 69, 0), fontsize=60, bold=True)        
+                        #self.io.typetext(self._frame_surface, 'Rhand : '+Rhstatus, (20, 1000), (255, 69, 0), fontsize=60, bold=True) 
 
                         if self.dtw.evalstr != '':
-                            self.io.typetext(self._frame_surface, self.dtw.evalstr, (100, 300),(255, 0, 0), fontsize=100)
+                            self.io.typetext(self._frame_surface, self.dtw.evalstr, (20, 300),(0, 255, 0), fontsize=100)
                             self.dtw.fcnt += 1
                             if self.dtw.fcnt > 30 :
                                 self.dtw.evalstr = ''
                                 self.dtw.fcnt  = 0
                     else:
-                        self.io.typetext(self._frame_surface, 'finish exercise '+str(self.exeno), (100, 300),(255, 0, 0), fontsize=100)
+                        self.io.typetext(self._frame_surface, 'Exercise '+str(self.exeno)+' is done', (100, 20),(255, 0, 0), fontsize=100)
                         if not self.kp.finish:
                             self.dtw.evaluation(self.exeno)
                             print self.dtw.idxlist
@@ -401,14 +401,15 @@ class BodyGameRuntime(object):
 
             # === text infomation on the surface ===
             if self.kp.vid_rcd:  # video recoding text
-                self.io.typetext(self._frame_surface, 'Video Recording', (1550, 20), (255, 0, 0))
+                #self.io.typetext(self._frame_surface, 'Video Recording', (1580, 20), (255, 0, 0))
 #                self.cimgs.create_dataset('img_'+repr(self.kp.fno).zfill(4), data = frame)
                 self.bdimgs.create_dataset('bd_' + repr(self.kp.fno).zfill(4), data=np.dstack((bodyidx, bodyidx, bodyidx)))
                 self.dimgs.create_dataset('d_' + repr(self.kp.fno).zfill(4), data=np.dstack((dframe, dframe, dframe)))
                 self.kp.fno += 1
                 self.kp.bdjoints.append(bddic)
             else:
-                self.io.typetext(self._frame_surface, 'Not Recording', (1550, 20), (0, 255, 0))
+                pass
+                #self.io.typetext(self._frame_surface, 'Not Recording', (1580, 20), (0, 255, 0))
 
             # if size of the display window is changed
             if (float(self._screen.get_height())/self._screen.get_width()) > self.h_to_w:
@@ -428,11 +429,13 @@ class BodyGameRuntime(object):
             self._screen.blit(surface_to_draw, (0, 0))
 
             # user change the avatar's sacle
-            if self.kp.scale != self.kp.pre_scale:
-                self.movie.draw(self._screen, self.default_w, self.default_h, self.kp.scale, True)
-                self.kp.pre_scale = self.kp.scale
-            else:
-                self.movie.draw(self._screen, self.default_w, self.default_h, self.kp.scale)
+            # if self.kp.scale != self.kp.pre_scale:
+            #     self.movie.draw(self._screen, self.default_w, self.default_h, self.kp.scale, True)
+            #     self.kp.pre_scale = self.kp.scale
+            # else:
+            #     self.movie.draw(self._screen, self.default_w, self.default_h, self.kp.scale)
+
+
             # update
             surface_to_draw = None
             pygame.display.update()

@@ -28,6 +28,7 @@ class Movie(object):
         """ generate movie's position.
             According to the keyboard feedback may become larger or smaller.
         """
+        # return [int(self.w*scale), int(self.h*scale)]
         return [screen_w-20-int(self.w*scale), screen_h-20-int(self.h*scale)]
 
     def draw(self, surface, screen_w, screen_h, scale=1, change=False):
